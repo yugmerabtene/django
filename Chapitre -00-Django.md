@@ -64,3 +64,100 @@ MTV est une adaptation du MVC pour Django, où :
 * le Template = interface utilisateur
 
 MTV n’est pas fondamentalement différent, c’est une réinterprétation du MVC avec des noms adaptés à la structure Django.
+
+----
+
+## **1. `manage.py`**
+
+**Rôle :**
+C’est le **point d’entrée principal** pour interagir avec ton projet Django via la ligne de commande.
+
+**Fonctions principales :**
+
+* Lancer le serveur de développement (`python manage.py runserver`)
+* Appliquer des migrations (`python manage.py migrate`)
+* Créer une application (`python manage.py startapp nom_app`)
+* Accéder à la console interactive Django (`python manage.py shell`)
+
+**Contenu typique :**
+
+```python
+from django.core.management import execute_from_command_line
+```
+
+Il importe et lance les commandes selon les paramètres que tu passes.
+
+---
+
+## **2. `settings.py`**
+
+**Rôle :**
+Contient **toute la configuration** du projet Django.
+
+**Principaux éléments :**
+
+* `INSTALLED_APPS` : liste des applications activées (ex. `django.contrib.admin`, `ton_app`)
+* `DATABASES` : configuration de la base de données (SQLite, PostgreSQL, etc.)
+* `TEMPLATES` : paramètres pour le moteur de template (HTML)
+* `MIDDLEWARE` : liste des middlewares (fonctions qui s’exécutent avant/après chaque requête)
+* `STATIC_URL`, `MEDIA_URL` : gestion des fichiers statiques et médias
+* `DEBUG` : active ou désactive le mode debug
+* `ALLOWED_HOSTS` : liste des hôtes autorisés (en prod, obligatoire)
+
+---
+
+## **3. `urls.py`**
+
+**Rôle :**
+C’est le **routeur principal** du projet. Il fait le lien entre les URL et les vues.
+
+**Contenu typique :**
+
+```python
+from django.urls import path, include
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('produits/', include('produits.urls')),
+]
+```
+
+**Fonctions :**
+
+* Associe une URL à une vue (fonction ou classe)
+* Peut déléguer vers les `urls.py` des applications internes
+
+---
+
+## **4. `wsgi.py`**
+
+**Rôle :**
+Fichier d’entrée pour les serveurs **WSGI** en production (comme Gunicorn, uWSGI, mod\_wsgi).
+
+**Fonctions :**
+
+* Prépare l'application Django à être exécutée par un serveur web
+* Sert d’interface entre le serveur et Django
+
+**Contenu typique :**
+
+```python
+from django.core.wsgi import get_wsgi_application
+
+application = get_wsgi_application()
+```
+
+C’est ce fichier qui sera utilisé quand tu héberges ton site sur un serveur web (ex : Apache, Nginx + Gunicorn).
+
+---
+
+## **Résumé**
+
+| Fichier       | Rôle                                                        |
+| ------------- | ----------------------------------------------------------- |
+| `manage.py`   | Lancer des commandes Django (dev, migration, test…)         |
+| `settings.py` | Configuration globale du projet                             |
+| `urls.py`     | Table de routage principale (URL vers vues)                 |
+| `wsgi.py`     | Point d’entrée WSGI pour les déploiements web en production |
+
+
