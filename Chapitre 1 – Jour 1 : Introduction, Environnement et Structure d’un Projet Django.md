@@ -1,7 +1,3 @@
-Parfait. Voici le **Chapitre 1 – Jour 1 : Introduction, Environnement et Structure d’un Projet Django**, avec **contenu complet, détaillé, pédagogique**, intégrant explications, commandes, exercices et points d’attention pour l’enseignant ou l’auto-apprenant.
-
----
-
 # **Chapitre 1 – Jour 1 : Introduction, Environnement et Structure d’un Projet Django**
 
 ---
