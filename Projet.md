@@ -1,4 +1,4 @@
-# Création du projet Django `lebonclone` avec PyCharm
+# Création du projet Django `lebonclone`
 
 ---
 
