@@ -1,88 +1,61 @@
-# Création du projet Django `lebonclone`
+# Projet Django : LebonClone - Application d'annonces avec API REST
 
----
+## Étape 1 : Initialisation du projet
 
-## Étape 1 : Préparer ton environnement
-
-1. Installer **Python 3.10+** si ce n’est pas déjà fait
-   (vérifie avec `python --version`)
-
-2. Installer **PyCharm Community ou Professional**
-
-3. Créer un **nouveau projet Django** dans PyCharm
-
-   * Ouvre PyCharm > New Project
-   * Choisis **Django** comme type de projet
-   * Coche "Create a new environment using venv"
-   * Nom du projet : `lebonclone`
-   * Décoche "Enable Django admin" si tu veux tout faire manuellement (facultatif)
-   * Valide
-
----
-
-## Étape 2 : Créer le projet Django (si tu ne l’as pas fait via l’assistant)
-
-Si tu es dans un projet vide :
-
+### 1.1 Créer le dossier de projet et l'environnement virtuel
 ```bash
-django-admin startproject lebonclone .
+mkdir leBonClone
+cd leBonClone
+python -m venv venv
+# Windows :
+venv\Scripts\activate
+# Linux/macOS :
+source venv/bin/activate
 ```
 
-Cela va créer les fichiers :
-
-* manage.py
-* lebonclone/settings.py
-* lebonclone/urls.py
-
----
-
-## Étape 3 : Vérifier que le projet fonctionne
-
-Dans le terminal de PyCharm :
-
+### 1.2 Installer les dépendances
 ```bash
-python manage.py runserver
+pip install django djangorestframework djangorestframework-simplejwt pillow
 ```
 
-Puis ouvre le navigateur sur [http://127.0.0.1:8000](http://127.0.0.1:8000)
-Tu dois voir "The install worked successfully!"
-
----
-
-## Étape 4 : Créer l’application principale `annonces`
-
+### 1.3 Créer le projet Django et l'application
 ```bash
+django-admin startproject leBonClone .
 python manage.py startapp annonces
 ```
 
-Puis ajoute `"annonces"` dans `INSTALLED_APPS` de `lebonclone/settings.py` :
+## Étape 2 : Configuration de base
 
+### 2.1 `leBonClone/settings.py`
 ```python
 INSTALLED_APPS = [
-    ...
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'rest_framework',
     'annonces',
 ]
-```
 
----
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
-## Étape 5 : Configurer la base de données
+TEMPLATES[0]['DIRS'] = [BASE_DIR / 'templates']
 
-Par défaut, Django utilise **SQLite**. Tu n’as rien à faire si tu veux garder cette configuration simple :
+AUTH_USER_MODEL = 'annonces.Utilisateur'
 
-```python
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / "db.sqlite3",
-    }
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ]
 }
 ```
 
-## Étape 6 : Créer les modèles
+## Étape 3 : Modèles de données
 
-Dans `annonces/models.py` :
-
+### 3.1 `annonces/models.py`
 ```python
 from django.db import models
 from django.contrib.auth.models import AbstractUser
@@ -97,108 +70,95 @@ class Categorie(models.Model):
         return self.nom
 
 class Annonce(models.Model):
-    titre = models.CharField(max_length=255)
+    titre = models.CharField(max_length=200)
     description = models.TextField()
     prix = models.DecimalField(max_digits=10, decimal_places=2)
     date_publication = models.DateTimeField(auto_now_add=True)
+    image = models.ImageField(upload_to='annonces/', blank=True, null=True)
     categorie = models.ForeignKey(Categorie, on_delete=models.CASCADE)
     utilisateur = models.ForeignKey(Utilisateur, on_delete=models.CASCADE)
-    image = models.ImageField(upload_to='annonces/', blank=True, null=True)
 
     def __str__(self):
         return self.titre
 ```
 
----
-
-## Étape 7 : Indiquer à Django d’utiliser ton modèle utilisateur personnalisé
-
-Dans `lebonclone/settings.py` :
-
-```python
-AUTH_USER_MODEL = 'annonces.Utilisateur'
-```
-
----
-
-## Étape 8 : Appliquer les migrations
-
+### 3.2 Migrer la base de données
 ```bash
 python manage.py makemigrations
 python manage.py migrate
 ```
 
----
+## Étape 4 : Interface d'administration
 
-## Étape 9 : Créer un superutilisateur pour l’administration
-
-```bash
-python manage.py createsuperuser
-```
-
----
-
-## Étape 10 : Enregistrer les modèles dans l’admin
-
-Dans `annonces/admin.py` :
-
+### 4.1 `annonces/admin.py`
 ```python
 from django.contrib import admin
+from .models import Utilisateur, Categorie, Annonce
 from django.contrib.auth.admin import UserAdmin
-from .models import Utilisateur, Annonce, Categorie
 
-@admin.register(Utilisateur)
-class UtilisateurAdmin(UserAdmin):
-    model = Utilisateur
-    list_display = ['username', 'email', 'telephone']
-
-admin.site.register(Annonce)
+admin.site.register(Utilisateur, UserAdmin)
 admin.site.register(Categorie)
+admin.site.register(Annonce)
 ```
 
----
+## Étape 5 : Création des templates
 
-## Étape 11 : Créer les templates de base
+### 5.1 Arborescence
+```
+templates/
+  base.html
+  annonces/
+    liste_annonces.html
+    detail_annonce.html
+    creer_annonce.html
+```
 
-Créer un dossier `templates/annonces/`
-Créer `base.html`, `liste_annonces.html`, `detail_annonce.html`, `creer_annonce.html`
-
-Exemple de `base.html` :
-
+### 5.2 Exemple `base.html`
 ```html
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Lebonclone</title>
+  <title>LebonClone</title>
 </head>
 <body>
-    <h1>Lebonclone</h1>
-    {% block content %}{% endblock %}
+  <h1>LebonClone</h1>
+  {% block content %}{% endblock %}
 </body>
 </html>
 ```
 
----
+### 5.3 Exemple `liste_annonces.html`
+```html
+{% extends 'base.html' %}
+{% block content %}
+<h2>Liste des annonces</h2>
+{% for annonce in annonces %}
+  <div>
+    <h3><a href="{% url 'detail_annonce' annonce.id %}">{{ annonce.titre }}</a></h3>
+    <p>{{ annonce.description|truncatewords:20 }}</p>
+    <p>{{ annonce.prix }} €</p>
+  </div>
+{% empty %}<p>Aucune annonce.</p>{% endfor %}
+<a href="{% url 'creer_annonce' %}">Créer une annonce</a>
+{% endblock %}
+```
 
-## Étape 12 : Vues et URLs
+## Étape 6 : Les vues
 
-Dans `annonces/views.py` :
-
+### 6.1 `annonces/views.py`
 ```python
 from django.shortcuts import render, get_object_or_404, redirect
 from .models import Annonce
 from .forms import AnnonceForm
-from django.contrib.auth.decorators import login_required
 
 def liste_annonces(request):
     annonces = Annonce.objects.all()
     return render(request, 'annonces/liste_annonces.html', {'annonces': annonces})
 
 def detail_annonce(request, id):
-    annonce = get_object_or_404(Annonce, pk=id)
+    annonce = get_object_or_404(Annonce, id=id)
     return render(request, 'annonces/detail_annonce.html', {'annonce': annonce})
 
-@login_required
 def creer_annonce(request):
     if request.method == 'POST':
         form = AnnonceForm(request.POST, request.FILES)
@@ -212,8 +172,22 @@ def creer_annonce(request):
     return render(request, 'annonces/creer_annonce.html', {'form': form})
 ```
 
-Dans `annonces/urls.py` :
+## Étape 7 : Formulaires
 
+### 7.1 `annonces/forms.py`
+```python
+from django import forms
+from .models import Annonce
+
+class AnnonceForm(forms.ModelForm):
+    class Meta:
+        model = Annonce
+        fields = ['titre', 'description', 'prix', 'image', 'categorie']
+```
+
+## Étape 8 : Routage
+
+### 8.1 `annonces/urls.py`
 ```python
 from django.urls import path
 from . import views
@@ -225,55 +199,121 @@ urlpatterns = [
 ]
 ```
 
-Et dans `lebonclone/urls.py` :
-
+### 8.2 `leBonClone/urls.py`
 ```python
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('annonces.urls')),
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/', include('annonces.api_urls')),
+]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+```
+
+## Étape 9 : API REST avec DRF
+
+### 9.1 `annonces/serializers.py`
+```python
+from rest_framework import serializers
+from .models import Annonce, Categorie
+
+class AnnonceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Annonce
+        fields = '__all__'
+
+class CategorieSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Categorie
+        fields = '__all__'
+```
+
+### 9.2 `annonces/api_views.py`
+```python
+from rest_framework import viewsets
+from .models import Annonce, Categorie
+from .serializers import AnnonceSerializer, CategorieSerializer
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
+
+class AnnonceViewSet(viewsets.ModelViewSet):
+    queryset = Annonce.objects.all()
+    serializer_class = AnnonceSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+class CategorieViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Categorie.objects.all()
+    serializer_class = CategorieSerializer
+```
+
+### 9.3 `annonces/api_urls.py`
+```python
+from rest_framework.routers import DefaultRouter
+from .api_views import AnnonceViewSet, CategorieViewSet
+
+router = DefaultRouter()
+router.register('annonces', AnnonceViewSet)
+router.register('categories', CategorieViewSet)
+
+urlpatterns = router.urls
+```
+
+## Étape 10 : Générer des données fictives (fixtures)
+
+### 10.1 Exemple `fixtures.json`
+Créer le fichier `annonces/fixtures/annonces.json` :
+```json
+[
+  {
+    "model": "annonces.categorie",
+    "pk": 1,
+    "fields": {
+      "nom": "Électronique"
+    }
+  },
+  {
+    "model": "annonces.utilisateur",
+    "pk": 1,
+    "fields": {
+      "username": "admin",
+      "password": "pbkdf2_sha256$...",  # Générer via createsuperuser
+      "is_superuser": true,
+      "is_staff": true
+    }
+  },
+  {
+    "model": "annonces.annonce",
+    "pk": 1,
+    "fields": {
+      "titre": "iPhone 13",
+      "description": "Neuf sous blister",
+      "prix": "799.00",
+      "categorie": 1,
+      "utilisateur": 1,
+      "date_publication": "2025-06-15T10:00:00Z"
+    }
+  }
 ]
 ```
 
----
-
-## Étape 13 : Formulaire
-
-Dans `annonces/forms.py` :
-
-```python
-from django import forms
-from .models import Annonce
-
-class AnnonceForm(forms.ModelForm):
-    class Meta:
-        model = Annonce
-        fields = ['titre', 'description', 'prix', 'categorie', 'image']
+### 10.2 Charger les données
+```bash
+python manage.py loaddata annonces/fixtures/annonces.json
 ```
 
----
-
-## Étape 14 : Configuration des fichiers médias
-
-Dans `settings.py` :
-
-```python
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+## Étape 11 : Lancer l'application
+```bash
+python manage.py runserver
 ```
 
-Dans `urls.py` :
-
-```python
-from django.conf import settings
-from django.conf.urls.static import static
-
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-```
-
----
 
 ## Étape 15 : Test final
 
