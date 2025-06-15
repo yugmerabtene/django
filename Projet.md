@@ -1,51 +1,89 @@
-# Projet Django : LebonClone - Application d'annonces avec API REST
+# Guide Complet – Projet Django : LebonClone
 
-## Étape 1 : Initialisation du projet
+## **Étape 1 – Création du projet Django**
 
-### 1.1 Créer le dossier de projet et l'environnement virtuel
+### 1.1 Créer le dossier du projet et l’environnement virtuel
+
+Dans ton terminal (ou PowerShell sous Windows) :
+
 ```bash
 mkdir leBonClone
 cd leBonClone
 python -m venv venv
-# Windows :
-venv\Scripts\activate
-# Linux/macOS :
-source venv/bin/activate
 ```
 
-### 1.2 Installer les dépendances
+### 1.2 Activer l’environnement virtuel
+
+* Sous **Windows** :
+
+  ```bash
+  venv\Scripts\activate
+  ```
+
+* Sous **Linux/macOS** :
+
+  ```bash
+  source venv/bin/activate
+  ```
+
+### 1.3 Installer les dépendances
+
 ```bash
 pip install django djangorestframework djangorestframework-simplejwt pillow
 ```
 
-### 1.3 Créer le projet Django et l'application
+---
+
+## **Étape 2 – Initialiser le projet Django**
+
 ```bash
 django-admin startproject leBonClone .
 python manage.py startapp annonces
 ```
 
-## Étape 2 : Configuration de base
+Cela crée deux dossiers :
 
-### 2.1 `leBonClone/settings.py`
+* `leBonClone/` : le cœur du projet
+* `annonces/` : l'application qui gère les annonces
+
+---
+
+## **Étape 3 – Configurer `settings.py`**
+
+Dans `leBonClone/settings.py`, modifie :
+
+### 3.1 Ajoute les apps :
+
 ```python
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
+    ...
     'rest_framework',
     'annonces',
 ]
+```
 
+### 3.2 Configure les templates :
+
+```python
+TEMPLATES[0]['DIRS'] = [BASE_DIR / 'templates']
+```
+
+### 3.3 Configure les médias :
+
+```python
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+```
 
-TEMPLATES[0]['DIRS'] = [BASE_DIR / 'templates']
+### 3.4 Utilisateur personnalisé :
 
+```python
 AUTH_USER_MODEL = 'annonces.Utilisateur'
+```
 
+### 3.5 REST Framework + JWT :
+
+```python
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -53,9 +91,12 @@ REST_FRAMEWORK = {
 }
 ```
 
-## Étape 3 : Modèles de données
+---
 
-### 3.1 `annonces/models.py`
+## **Étape 4 – Modèles de base : `models.py`**
+
+Dans `annonces/models.py` :
+
 ```python
 from django.db import models
 from django.contrib.auth.models import AbstractUser
@@ -65,7 +106,6 @@ class Utilisateur(AbstractUser):
 
 class Categorie(models.Model):
     nom = models.CharField(max_length=100)
-
     def __str__(self):
         return self.nom
 
@@ -82,15 +122,19 @@ class Annonce(models.Model):
         return self.titre
 ```
 
-### 3.2 Migrer la base de données
+---
+
+## **Étape 5 – Migration de la base**
+
 ```bash
 python manage.py makemigrations
 python manage.py migrate
 ```
 
-## Étape 4 : Interface d'administration
+---
 
-### 4.1 `annonces/admin.py`
+## **Étape 6 – Interface admin : `admin.py`**
+
 ```python
 from django.contrib import admin
 from .models import Utilisateur, Categorie, Annonce
@@ -101,9 +145,22 @@ admin.site.register(Categorie)
 admin.site.register(Annonce)
 ```
 
-## Étape 5 : Création des templates
+---
 
-### 5.1 Arborescence
+## **Étape 7 – Création manuelle de l'utilisateur admin**
+
+```bash
+python manage.py createsuperuser
+```
+
+Saisis : **username**, **email**, **mot de passe**.
+
+---
+
+## **Étape 8 – Templates HTML**
+
+### Structure :
+
 ```
 templates/
   base.html
@@ -113,7 +170,8 @@ templates/
     creer_annonce.html
 ```
 
-### 5.2 Exemple `base.html`
+### `templates/base.html`
+
 ```html
 <!DOCTYPE html>
 <html>
@@ -127,7 +185,8 @@ templates/
 </html>
 ```
 
-### 5.3 Exemple `liste_annonces.html`
+### `templates/annonces/liste_annonces.html`
+
 ```html
 {% extends 'base.html' %}
 {% block content %}
@@ -143,9 +202,10 @@ templates/
 {% endblock %}
 ```
 
-## Étape 6 : Les vues
+---
 
-### 6.1 `annonces/views.py`
+## **Étape 9 – Les vues : `views.py`**
+
 ```python
 from django.shortcuts import render, get_object_or_404, redirect
 from .models import Annonce
@@ -172,9 +232,10 @@ def creer_annonce(request):
     return render(request, 'annonces/creer_annonce.html', {'form': form})
 ```
 
-## Étape 7 : Formulaires
+---
 
-### 7.1 `annonces/forms.py`
+## **Étape 10 – Les formulaires : `forms.py`**
+
 ```python
 from django import forms
 from .models import Annonce
@@ -185,9 +246,12 @@ class AnnonceForm(forms.ModelForm):
         fields = ['titre', 'description', 'prix', 'image', 'categorie']
 ```
 
-## Étape 8 : Routage
+---
 
-### 8.1 `annonces/urls.py`
+## **Étape 11 – Routage**
+
+### `annonces/urls.py`
+
 ```python
 from django.urls import path
 from . import views
@@ -199,7 +263,8 @@ urlpatterns = [
 ]
 ```
 
-### 8.2 `leBonClone/urls.py`
+### `leBonClone/urls.py`
+
 ```python
 from django.contrib import admin
 from django.urls import path, include
@@ -213,15 +278,15 @@ urlpatterns = [
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/', include('annonces.api_urls')),
-]
-
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 ```
 
-## Étape 9 : API REST avec DRF
+---
 
-### 9.1 `annonces/serializers.py`
+## **Étape 12 – API REST**
+
+### `annonces/serializers.py`
+
 ```python
 from rest_framework import serializers
 from .models import Annonce, Categorie
@@ -237,7 +302,8 @@ class CategorieSerializer(serializers.ModelSerializer):
         fields = '__all__'
 ```
 
-### 9.2 `annonces/api_views.py`
+### `annonces/api_views.py`
+
 ```python
 from rest_framework import viewsets
 from .models import Annonce, Categorie
@@ -254,7 +320,8 @@ class CategorieViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = CategorieSerializer
 ```
 
-### 9.3 `annonces/api_urls.py`
+### `annonces/api_urls.py`
+
 ```python
 from rest_framework.routers import DefaultRouter
 from .api_views import AnnonceViewSet, CategorieViewSet
@@ -266,58 +333,61 @@ router.register('categories', CategorieViewSet)
 urlpatterns = router.urls
 ```
 
-## Étape 10 : Générer des données fictives (fixtures)
+---
 
-### 10.1 Exemple `fixtures.json`
-Créer le fichier `annonces/fixtures/annonces.json` :
+## **Étape 13 – Fixtures de test**
+
+### `annonces/fixtures/annonces.json`
+
 ```json
 [
   {
     "model": "annonces.categorie",
     "pk": 1,
-    "fields": {
-      "nom": "Électronique"
-    }
-  },
-  {
-    "model": "annonces.utilisateur",
-    "pk": 1,
-    "fields": {
-      "username": "admin",
-      "password": "pbkdf2_sha256$...",  # Générer via createsuperuser
-      "is_superuser": true,
-      "is_staff": true
-    }
+    "fields": { "nom": "Informatique" }
   },
   {
     "model": "annonces.annonce",
     "pk": 1,
     "fields": {
-      "titre": "iPhone 13",
-      "description": "Neuf sous blister",
-      "prix": "799.00",
+      "titre": "PC Gamer Ryzen",
+      "description": "Tour neuve, très puissante",
+      "prix": "1200.00",
       "categorie": 1,
       "utilisateur": 1,
-      "date_publication": "2025-06-15T10:00:00Z"
+      "date_publication": "2025-06-15T14:00:00Z"
     }
   }
 ]
 ```
 
-### 10.2 Charger les données
+### Commande :
+
 ```bash
 python manage.py loaddata annonces/fixtures/annonces.json
 ```
 
-## Étape 11 : Lancer l'application
+---
+
+## **Étape 14 – Lancer le serveur**
+
 ```bash
 python manage.py runserver
 ```
 
+---
 
-## Étape 15 : Test final
+## **Étape 15 – Test final**
 
-* Lance le serveur avec `python manage.py runserver`
-* Va sur `http://127.0.0.1:8000/`
-* Crée une annonce, consulte les détails
-* Teste l’admin sur `/admin/`
+* Va sur : `http://127.0.0.1:8000/`
+* Crée une annonce
+* Clique dessus pour consulter les détails
+* Va sur `/admin` pour gérer les utilisateurs, annonces, catégories
+
+---
+
+**Aller plus loin :**
+
+* ajouter la **pagination, la recherche, le filtrage par catégorie** 
+* créer des **tests unitaires** 
+* Créer un endpoint crossplateform avec ReactNative 
