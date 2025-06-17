@@ -90,3 +90,85 @@ Kafka garde ces messages pour un certain **temps configurable**, même s'ils son
 * Les **producteurs** y publient des messages
 * Les **consommateurs** s’y abonnent pour traiter ces messages
 * Cela permet un **découplage fort**, une **scalabilité élevée** et une **architecture événementielle**
+
+  ----
+
+
+
+## 1. Pourquoi certains services ne doivent **pas** être abonnés à certains topics ?
+
+### Raisons principales :
+
+* **Principe de moindre privilège** : un service ne doit traiter que ce dont il a besoin.
+* **Éviter le bruit** : recevoir des messages inutiles alourdit le traitement et augmente le risque d'erreur.
+* **Séparation des responsabilités** : chaque service a une responsabilité unique (Single Responsibility Principle).
+* **Sécurité des données** : certains topics contiennent des données sensibles (ex. infos bancaires).
+
+---
+
+## 2. Exemples Concrets
+
+### Contexte : Application e-commerce avec les topics suivants
+
+* `order_created`
+* `payment_successful`
+* `user_registered`
+* `product_added`
+* `delivery_dispatched`
+
+### Cas corrects
+
+| Service            | Doit s'abonner à                   | Raison                                    |
+| ------------------ | ---------------------------------- | ----------------------------------------- |
+| `email_service`    | `order_created`, `user_registered` | Envoyer confirmation et mail de bienvenue |
+| `payment_service`  | `order_created`                    | Déclenche le paiement après une commande  |
+| `shipping_service` | `payment_successful`               | Organise la livraison après paiement      |
+| `crm_service`      | `user_registered`                  | Intègre l’utilisateur au CRM              |
+
+### Cas incorrects
+
+| Service            | Ne doit **pas** s'abonner à           | Pourquoi ?                                          |
+| ------------------ | ------------------------------------- | --------------------------------------------------- |
+| `email_service`    | `payment_successful`                  | Il n’a rien à faire avec les paiements              |
+| `payment_service`  | `delivery_dispatched`                 | La livraison ne le concerne pas                     |
+| `crm_service`      | `order_created`, `payment_successful` | Ce sont des événements métiers, pas CRM             |
+| `shipping_service` | `user_registered`                     | La création de compte n’est pas liée à la livraison |
+
+---
+
+## 3. Cas de figure mal conçus
+
+### a. Tous les services écoutent tous les topics
+
+* Problème : grosse **perte de performance**, confusion dans la logique, sécurité affaiblie.
+* Risque : un bug dans un service peut affecter des flux qui ne le concernent pas.
+
+### b. Un service écoute un topic "au cas où"
+
+* Mauvaise pratique. Cela conduit à du code spaghetti.
+* Il faut au contraire avoir une architecture propre, où **chaque service sait pourquoi** il lit tel ou tel événement.
+
+---
+
+## 4. Meilleures pratiques
+
+* **Documenter clairement** quels services publient et consomment chaque topic.
+* **Limiter les droits** dans Kafka avec des ACLs (Kafka Access Control Lists).
+* **Valider le schéma des messages** avec des outils comme Avro ou JSON Schema.
+* **Utiliser des noms de topics explicites** pour éviter les erreurs (ex: `user.registered.v1`, `order.paid.v1`).
+
+---
+
+## 5. Schéma synthétique
+
+Voici un exemple correct d'abonnement par topic :
+
+| Topic                 | Producteur         | Consommateurs                      |
+| --------------------- | ------------------ | ---------------------------------- |
+| `user_registered`     | `user_service`     | `email_service`, `crm_service`     |
+| `order_created`       | `order_service`    | `payment_service`, `email_service` |
+| `payment_successful`  | `payment_service`  | `shipping_service`                 |
+| `delivery_dispatched` | `shipping_service` | `notification_service`             |
+
+---
+
