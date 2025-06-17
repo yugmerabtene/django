@@ -121,3 +121,73 @@ server {
 * Dès que tu as **plusieurs instances d’un service**
 * Dès que tu veux gérer du **failover automatique**
 * Si tu veux faire du **rolling update** sans interruption de service
+
+  ----
+
+
+---
+
+##  Le modèle OSI : résumé des 7 couches
+
+| Couche | Nom                    | Fonction principale                                   | Exemple           |
+| ------ | ---------------------- | ----------------------------------------------------- | ----------------- |
+| 7      | **Application**        | Interface avec l’utilisateur ou une appli (HTTP, FTP) | HTTP, DNS, SMTP   |
+| 6      | **Présentation**       | Encodage, chiffrement, compression                    | TLS/SSL, JPEG     |
+| 5      | **Session**            | Ouverture, gestion, fermeture de sessions             | API WebSocket     |
+| 4      | **Transport**          | Transmission fiable, segmentation                     | TCP, UDP          |
+| 3      | **Réseau**             | Routage entre réseaux, adressage IP                   | IP, ICMP          |
+| 2      | **Liaison de données** | Transmission sur un lien physique                     | Ethernet, Wi-Fi   |
+| 1      | **Physique**           | Transmission brute (électrique, optique…)             | Câble RJ45, fibre |
+
+---
+
+##  Focus sur **L4** vs **L7** pour le Load Balancing et le Proxy
+
+| Niveau | Couche | Nom OSI     | Load Balancing basé sur...         | Exemples d'outils                           | Cas d’usage typique                                              |
+| ------ | ------ | ----------- | ---------------------------------- | ------------------------------------------- | ---------------------------------------------------------------- |
+| L4     | 4      | Transport   | Adresse IP + Port (TCP/UDP)        | HAProxy (TCP mode), NGINX (stream), AWS NLB | Équilibrer des connexions TCP (ex: base de données, Kafka, SMTP) |
+| L7     | 7      | Application | Contenu HTTP : URL, Header, Cookie | NGINX (HTTP mode), Traefik, Kong, AWS ALB   | API REST, routage par chemin, authentification, compression      |
+
+---
+
+##  Comparaison L4 vs L7 (résumé simplifié)
+
+| Critère                      | L4 (Transport)                | L7 (Application)                              |
+| ---------------------------- | ----------------------------- | --------------------------------------------- |
+| Analyse du trafic            | Basé sur IP et port           | Basé sur contenu HTTP (URL, headers, cookies) |
+| Performances                 | Plus rapide (moins d’analyse) | Légèrement plus lent (inspection complète)    |
+| Routage avancé (path, host…) | ❌ Non                         | ✅ Oui                                         |
+| TLS termination (HTTPS)      | ❌ Non                         | ✅ Oui                                         |
+| Authentification             | ❌ Non                         | ✅ Possible                                    |
+| Compression / cache          | ❌ Non                         | ✅ Possible                                    |
+| Exemple de protocole         | TCP, UDP                      | HTTP, HTTPS, gRPC                             |
+| Utilisation typique          | DB, Kafka, Redis, SMTP        | API Gateway, Web frontends, REST/GraphQL      |
+
+---
+
+##  Exemple concret
+
+### L4 Load Balancer :
+
+* Tu veux équilibrer plusieurs bases de données PostgreSQL
+* Le LB reçoit du **TCP**, regarde l’**IP/port**, et transfère sans inspecter le contenu.
+
+### L7 Load Balancer :
+
+* Tu veux qu’un reverse proxy envoie :
+
+  * `/api/users` vers `user_service`
+  * `/api/orders` vers `order_service`
+* Le proxy **lit l’URL** HTTP, peut vérifier un **token JWT**, compresser la réponse, etc.
+
+---
+
+##  En résumé
+
+| Si tu veux…                                  | Choisis… |
+| -------------------------------------------- | -------- |
+| Gérer du trafic HTTP, REST, API versionnée   | L7       |
+| Load-balancer du Kafka, PostgreSQL, Redis    | L4       |
+| Ajouter de l’auth, du cache, du CORS, du SSL | L7       |
+| Faire du routage rapide et bas niveau        | L4       |
+
