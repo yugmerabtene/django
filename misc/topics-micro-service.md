@@ -172,3 +172,106 @@ Voici un exemple correct d'abonnement par topic :
 
 ---
 
+## 🔹 Explication Complète : Microservices + Kafka + Topics
+
+### 1. **Kafka comme médiateur d’événements**
+
+Kafka est **central** dans l’architecture : il permet aux services de **publier** des événements (**producers**) et à d’autres de **réagir** (**consumers**) sans dépendance directe.
+
+Un **topic** n’appartient à aucun microservice. Il est juste un **canal d’événements nommés**, par exemple :
+
+* `user.registered`
+* `order.created`
+* `payment.completed`
+
+### 2. **Un service peut :**
+
+* Publier sur un topic (producteur)
+* S’abonner à un topic (consommateur)
+* Faire les deux (ex: recevoir un événement, agir, et publier un autre)
+
+---
+
+## 🔹 Exemple Concret : Application e-commerce
+
+### Microservices :
+
+* `user_service`
+* `order_service`
+* `payment_service`
+* `shipping_service`
+* `email_service`
+
+### Topics :
+
+* `user.registered`
+* `order.created`
+* `payment.successful`
+* `delivery.shipped`
+
+---
+
+## 🔹 Schéma Textuel de la Circulation (ASCII)
+
+### Étape 1 : Création d’un compte utilisateur
+
+```
+[user_service]
+     |
+     | --> Kafka.publish("user.registered", {user_id: 1})
+     |
+     +--> Topic: user.registered
+                  |
+                  +--> [email_service] --> Envoi email de bienvenue
+                  |
+                  +--> [crm_service]   --> Intégration CRM
+```
+
+### Étape 2 : Création d'une commande
+
+```
+[order_service]
+     |
+     | --> Kafka.publish("order.created", {order_id: 23, user_id: 1})
+     |
+     +--> Topic: order.created
+                  |
+                  +--> [payment_service] --> Déclenche le paiement
+                  |
+                  +--> [email_service]   --> Envoi email confirmation de commande
+```
+
+### Étape 3 : Paiement réussi
+
+```
+[payment_service]
+     |
+     | --> Kafka.publish("payment.successful", {order_id: 23})
+     |
+     +--> Topic: payment.successful
+                  |
+                  +--> [shipping_service] --> Prépare la livraison
+                  |
+                  +--> [email_service]    --> Email reçu paiement
+```
+
+---
+
+## 🔹 Résumé des rôles
+
+| Service            | Publie sur           | S’abonne à                                               |
+| ------------------ | -------------------- | -------------------------------------------------------- |
+| `user_service`     | `user.registered`    | —                                                        |
+| `order_service`    | `order.created`      | —                                                        |
+| `payment_service`  | `payment.successful` | `order.created`                                          |
+| `shipping_service` | `delivery.shipped`   | `payment.successful`                                     |
+| `email_service`    | —                    | `user.registered`, `order.created`, `payment.successful` |
+
+---
+
+## 🔹 Bonnes pratiques
+
+* **Pas de consumer inutile** : chaque service ne s’abonne **que** aux topics utiles.
+* **Topics = événements métiers** : toujours nommer clairement (ex: `user.deleted`, pas `topic42`)
+* **Kafka = médiateur, pas routeur** : Kafka ne sait pas qui lit quoi, c’est à toi de gérer ça proprement.
+* **Versionnage de topic** possible : `order.created.v1`, `order.created.v2`
