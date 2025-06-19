@@ -23,6 +23,8 @@ Kafka fonctionne comme une **file de messages persistante**, rapide, partitionn�
 * **Zookeeper** (optionnel depuis Kafka 2.8) : utilisé auparavant pour la coordination des brokers
 * **Kafka Controller** : dans le mode KRaft (Kafka sans Zookeeper), il gère les brokers, partitions et élections de leader
 
+![image](https://github.com/user-attachments/assets/baaf01c7-bc5d-4de8-8150-67bbca5b6028)
+
 ---
 
 ## 3. Fonctionnement détaillé
