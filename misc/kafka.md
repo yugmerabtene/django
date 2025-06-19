@@ -110,3 +110,197 @@ En cas de panne du broker leader, un réplica est promu leader automatiquement.
 * Pipelines de données (ETL, ingestion temps réel)
 * Systèmes de recommandation ou de détection de fraudes
 * Communication entre systèmes hétérogènes
+
+  ----
+
+
+
+# 1. Définition de Kafka
+
+Kafka est un système de messagerie distribué de type **publish/subscribe** conçu pour des applications à très fort débit, nécessitant :
+
+* la **persistance des messages**
+* la **tolérance aux pannes**
+* la **scalabilité horizontale**
+* le **rejeu possible** des événements (reprocessing, débogage)
+
+Contrairement à d'autres systèmes comme RabbitMQ, Kafka ne supprime pas les messages dès qu’ils sont lus. Il stocke un **log immuable** réparti sur plusieurs partitions.
+
+---
+
+# 2. Architecture logique de Kafka
+
+Kafka repose sur les éléments suivants :
+
+**Producer** : envoie des messages à un topic Kafka.
+
+**Consumer** : lit les messages depuis Kafka.
+
+**Broker** : serveur Kafka qui héberge des partitions.
+
+**Topic** : canal nommé auquel les producers écrivent et dont les consumers lisent.
+
+**Partition** : division physique d’un topic pour permettre la parallélisation.
+
+**Offset** : numéro croissant attribué à chaque message dans une partition.
+
+**Consumer Group** : ensemble de consumers travaillant ensemble pour consommer un topic sans doublon.
+
+**Zookeeper** ou **KRaft** : système de gestion des métadonnées (le mode KRaft remplace Zookeeper depuis Kafka 2.8+).
+
+---
+
+# 3. Écriture d’un message par un Producer
+
+## Étapes détaillées :
+
+1. Le producer crée un **Kafka Record** contenant :
+
+   * un `topic`
+   * une `key` (optionnelle)
+   * une `value`
+   * éventuellement des `headers`
+
+2. Kafka choisit la **partition cible** :
+
+   * Si une `key` est fournie : Kafka calcule un hash pour déterminer la partition
+   * Si aucune `key` : Kafka applique une stratégie de round-robin
+
+3. Kafka bufferise localement les messages dans une mémoire temporaire (RecordAccumulator)
+
+4. Le batch est compressé (Snappy, Gzip ou LZ4) et sérialisé (JSON, Avro, Protobuf)
+
+5. Kafka envoie le batch à un broker, selon la configuration de fiabilité (`acks`)
+
+   * `acks=0` : aucun accusé de réception attendu
+   * `acks=1` : le leader de la partition confirme l’écriture
+   * `acks=all` : tous les réplicas doivent confirmer
+
+---
+
+# 4. Traitement d’un message par le Broker
+
+Une fois reçu, le broker exécute les étapes suivantes :
+
+1. Stocke le message dans un **fichier de log append-only**
+
+   * Chaque partition correspond à un fichier sur disque
+   * Le message est ajouté à la fin du fichier, avec un offset unique
+
+2. Met à jour les fichiers d’index (.index, .timeindex)
+
+3. Si la partition est répliquée :
+
+   * Le leader envoie le message aux **ISR** (In-Sync Replicas)
+   * Les ISR confirment l’écriture
+   * Kafka attend les ACKs selon la config (`acks=all`)
+
+4. Le broker retourne un ACK au Producer, incluant l’offset du message
+
+---
+
+# 5. Lecture d’un message par un Consumer
+
+## Étapes détaillées :
+
+1. Le consumer est assigné à une ou plusieurs **partitions**
+
+2. Il lit séquentiellement les messages en appelant `poll()`
+
+   * Peut lire par lots (`max.poll.records`)
+   * Peut gérer un `timeout`
+
+3. Il désérialise et traite les messages
+
+4. Il effectue un **commit** :
+
+   * Automatique : Kafka enregistre l’offset à intervalle régulier
+   * Manuel : l’application contrôle précisément quand un offset est validé
+
+5. Le consumer peut relire un message depuis un offset spécifique :
+
+   * Pour reprocessing
+   * Pour corriger une erreur
+   * Pour reconstruire un état
+
+Kafka ne supprime pas les messages une fois lus. Ils restent disponibles jusqu’à expiration (`retention.ms`) ou dépassement de taille (`retention.bytes`).
+
+---
+
+# 6. Groupes de Consumers et parallélisme
+
+Un **Consumer Group** est un ensemble de consumers qui coopèrent pour consommer un topic.
+
+Règles de fonctionnement :
+
+* Une **partition donnée** est consommée par **au plus un consumer** dans le groupe
+* Si un groupe a plus de consumers que de partitions, certains consumers restent inactifs
+* Plusieurs groupes peuvent consommer indépendamment le même topic
+
+Cela permet :
+
+* La **scalabilité** horizontale en lecture
+* Le **rééquilibrage automatique** quand un consumer meurt ou arrive (`rebalance`)
+
+---
+
+# 7. Réplication, disponibilité et tolérance aux pannes
+
+Kafka assure la haute disponibilité via :
+
+* **Réplication de chaque partition**
+
+  * Un leader (élu automatiquement) écrit les données
+  * Les followers (ISR) répliquent les données
+
+* **Failover automatique**
+
+  * Si un leader tombe, un ISR prend le relais
+  * Le controller Kafka orchestre ce changement
+
+* **Zookeeper** (ancien) ou **KRaft mode** (nouveau)
+
+  * Gère la configuration des brokers
+  * Gère l’élection du controller
+
+---
+
+# 8. Fichiers internes de Kafka
+
+Chaque partition est stockée sous forme de plusieurs fichiers sur disque :
+
+* `.log` : les messages (append-only)
+* `.index` : offset → position byte dans le log
+* `.timeindex` : offset → timestamp
+
+Quand un fichier atteint `segment.bytes` (ex : 1Go), un **nouveau segment** est créé.
+
+Les segments plus anciens sont supprimés selon :
+
+* `log.retention.ms` : durée maximale
+* `log.retention.bytes` : taille totale maximale
+
+---
+
+# 9. Fonctionnement dans une architecture microservices
+
+Kafka est souvent utilisé comme **message broker central** dans une architecture microservices :
+
+1. Microservice `Commande` émet des événements dans le topic `commande`
+2. Kafka les stocke et les ordonne par partition
+3. Microservices `Paiement`, `Stock`, `Facturation` sont des consumers indépendants
+4. Chacun peut consommer à son rythme, ou rejouer l’historique en cas d’erreur
+5. Kafka assure la **résilience** si un service tombe, aucun message n’est perdu
+
+---
+
+# 10. Avantages techniques
+
+* **Débit élevé** : Kafka peut traiter des millions de messages par seconde
+* **Persistant** : les messages sont stockés sur disque
+* **Rejouabilité** : les consumers contrôlent leur offset
+* **Indépendance** entre producteurs et consommateurs
+* **Partitionnement** : permet la scalabilité horizontale
+* **Tolérance aux pannes** : via réplication et failover automatique
+
+---
