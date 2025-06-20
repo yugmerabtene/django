@@ -81,3 +81,72 @@
 
 3. `shipping_service` écoute `payment.successful` et livre.
 
+----
+
+La raison pour laquelle tu **ne vois pas les topics directement dans les schémas de réplication** Kafka, c’est parce que **les topics ne sont pas stockés "physiquement"**, contrairement aux **partitions** qui le sont réellement sur disque.
+
+Kafka gère les **topics comme une abstraction logique** qui est **répartie physiquement sous forme de partitions sur les brokers**.
+
+---
+
+### 🔍 Pourquoi on ne "voit pas" les topics physiquement ?
+
+Parce que **Kafka répartit les partitions directement sur les brokers**, et les **topics ne sont que des noms logiques** utilisés pour regrouper ces partitions.
+
+---
+
+### 📁 Illustration conceptuelle (corrigée avec les topics visibles)
+
+Voici un schéma **corrigé** pour bien **montrer la présence des topics**, et comment **les partitions sont réparties sur les brokers**, en distinguant **topics**, **partitions**, **leaders**, **followers** :
+
+```
+Kafka Cluster
+│
+├── Broker-1
+│   ├── Topic: order.placed
+│   │   ├── Partition 0 (Leader)
+│   │   ├── Partition 1 (Follower)
+│   │   └── Partition 2 (Follower)
+│   └── Topic: user.created
+│       └── Partition 0 (Follower)
+│
+├── Broker-2
+│   ├── Topic: order.placed
+│   │   ├── Partition 0 (Follower)
+│   │   ├── Partition 1 (Leader)
+│   │   └── Partition 2 (Follower)
+│   └── Topic: user.created
+│       └── Partition 0 (Leader)
+│
+├── Broker-3
+│   ├── Topic: order.placed
+│   │   ├── Partition 0 (Follower)
+│   │   ├── Partition 1 (Follower)
+│   │   └── Partition 2 (Leader)
+│   └── Topic: user.created
+│       └── Partition 0 (Follower)
+```
+
+---
+
+### 🔁 Explication
+
+* Les **topics existent toujours**, mais **leurs partitions sont ce qui est réellement stocké** sur les brokers.
+* Un topic peut avoir **n partitions**, et chaque partition a :
+
+  * 1 **leader**
+  * 0 ou plusieurs **réplicas** (followers)
+
+> Donc : **le topic n’est pas une entité physique**, ce sont ses **partitions** qui sont visibles dans la réplication et le stockage.
+
+---
+
+### 🔧 À retenir
+
+| Concept   | Visible physiquement ? | Description                                           |
+| --------- | ---------------------- | ----------------------------------------------------- |
+| Topic     | ❌ Non (abstraction)    | Regroupe les partitions                               |
+| Partition | ✅ Oui (stockée)        | Unité physique du topic avec messages ordonnés        |
+| Broker    | ✅ Oui (machine réelle) | Contient des partitions, peut être leader ou follower |
+| Cluster   | ✅ Oui (ensemble réel)  | Groupe de brokers Kafka                               |
+
